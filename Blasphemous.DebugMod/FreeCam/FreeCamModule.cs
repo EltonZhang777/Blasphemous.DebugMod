@@ -14,10 +14,17 @@ internal class FreeCamModule(Sprite image, float speed) : BaseModule(keybindName
 {
     private readonly Sprite _image = image;
     private readonly float _speed = speed;
+    private static readonly float _orthSizeMin = Main.Debugger.ConfigHandler.Load<Config>().cameraZoomMin;
+    private static readonly float __orthSizeMax = Main.Debugger.ConfigHandler.Load<Config>().cameraZoomMax;
+    private static readonly float _zoomSpeed = Main.Debugger.ConfigHandler.Load<Config>().cameraZoomSpeed;
     internal static readonly string keybindName = "Free_Cam";
+    internal static readonly string keybindName_ZoomIn = "Free_Cam_Zoom_In";
+    internal static readonly string keybindName_ZoomOut = "Free_Cam_Zoom_Out";
+    internal static readonly string keybindName_ZoomReset = "Free_Cam_Zoom_Reset";
 
     private Image cameraObject;
     private Vector3 cameraPosition;
+    private float _vanillaOrthographicSize;
 
     protected override void OnActivate()
     {
@@ -25,27 +32,42 @@ internal class FreeCamModule(Sprite image, float speed) : BaseModule(keybindName
             CreateCameraImage();
 
         cameraObject?.gameObject.SetActive(true);
+        _vanillaOrthographicSize = Camera.main.orthographicSize;
     }
 
     protected override void OnDeactivate()
     {
         cameraObject?.gameObject.SetActive(false);
+        Camera.main.orthographicSize = _vanillaOrthographicSize;
     }
 
     protected override void OnUpdate()
     {
-        if (IsActive)
-        {
-            float h = Main.Debugger.InputHandler.GetAxis(AxisCode.MoveRHorizontal, true);
-            float v = Main.Debugger.InputHandler.GetAxis(AxisCode.MoveRVertical, true);
-            var direction = new Vector3(h, v).normalized;
-
-            cameraPosition += direction * _speed * Time.deltaTime;
-            Camera.main.transform.position = cameraPosition;
-        }
-        else
+        if (!IsActive)
         {
             cameraPosition = Camera.main.transform.position;
+            return;
+        }
+
+        float h = Main.Debugger.InputHandler.GetAxis(AxisCode.MoveRHorizontal, true);
+        float v = Main.Debugger.InputHandler.GetAxis(AxisCode.MoveRVertical, true);
+        var direction = new Vector3(h, v).normalized;
+
+        cameraPosition += direction * _speed * Time.deltaTime;
+        Camera.main.transform.position = cameraPosition;
+
+        if (Main.Debugger.InputHandler.GetKey(keybindName_ZoomIn))
+        {
+            Camera.main.orthographicSize = Mathf.Max(_orthSizeMin, Camera.main.orthographicSize - _zoomSpeed * Time.deltaTime);
+        }
+        else if (Main.Debugger.InputHandler.GetKey(keybindName_ZoomOut))
+        {
+            Camera.main.orthographicSize = Mathf.Min(__orthSizeMax, Camera.main.orthographicSize + _zoomSpeed * Time.deltaTime);
+        }
+
+        if (Main.Debugger.InputHandler.GetKeyDown(keybindName_ZoomReset))
+        {
+            Camera.main.orthographicSize = _vanillaOrthographicSize;
         }
     }
 
